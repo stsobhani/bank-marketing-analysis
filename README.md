@@ -74,7 +74,3 @@ https://stsobhani.github.io/bank-marketing-analysis/
 3. Exploratory analysis of customer behavior patterns
 4. Tableau dashboard development for visualization
 5. Deployment via GitHub Pages
-
----
-
-## Repository Structure
