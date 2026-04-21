@@ -301,7 +301,7 @@ df = pd.read_csv(<span class="str">r'bank-additional\bank-additional-full.csv'</
 conn = sqlite3.connect(<span class="str">'bank_marketing.db'</span>)
 df.to_sql(<span class="str">'bank_marketing'</span>, conn, if_exists=<span class="str">'replace'</span>, index=<span class="kw">False</span>)
 
-<span class="cm"># Feature engineering in SQL — keeps it reproducible and auditable</span>
+<span class="cm"># Feature engineering in SQL: keeps it reproducible and auditable</span>
 conn.execute(<span class="str">"""CREATE VIEW model_features AS
   SELECT age,
     CASE WHEN age&lt;25 THEN 0 WHEN age&lt;35 THEN 1 WHEN age&lt;45 THEN 2
@@ -316,13 +316,13 @@ conn.execute(<span class="str">"""CREATE VIEW model_features AS
     CASE WHEN y='yes' THEN 1 ELSE 0 END                      AS y_binary
   FROM bank_marketing"""</span>)</pre>
   </div>
-  <p>
+  <p class="lead">
     This section prepares the dataset for analysis by loading the raw CSV into a SQLite database
     and creating a structured SQL view called <em>model_features</em>. The goal is to make the data
     clean, consistent, and ready for both analysis and modeling in a reproducible way.
   </p>
   <br><br>
-  <p>
+  <p class="lead">
     The SQL view transforms raw variables into numerical formats that machine learning models can interpret. For example, age is grouped into
     ordered bands, previous contact status (<code>pdays</code>) is converted into a binary indicator,
     and campaign outcome (<code>poutcome</code>) is encoded as an ordinal variable. Categorical values
