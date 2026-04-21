@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bank Marketing Campaign Analysis</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="hero-inner">
+    <div class="hero-eyebrow"><span>Marketing Analytics · SQL & Tableau</span></div>
+    <h1>Analysing <em>Bank Term Deposit</em> Campaigns</h1>
+    <p class="hero-desc">
+      This project analyzes a real-world bank marketing dataset from the UCI Machine Learning Repository from 2012,
+      containing 41,188 customer interactions from a term deposit campaign.
+
+      The goal is to understand what drives a customer’s decision to subscribe after a marketing call.
+
+      For this project I used SQL for data exploration, preprocessing, and aggregation, Python for data cleaning and feature engineering,
+      and Tableau to build interactive dashboards that highlight key behavioral and economic patterns.
+    </p>
+    <div class="hero-stats">
+      <div class="hstat">
+        <div class="hstat-val">41,188</div>
+        <div class="hstat-label">Real client contacts</div>
+      </div>
+      <div class="hstat">
+        <div class="hstat-val">11.27%</div>
+        <div class="hstat-label">Overall subscription rate</div>
+      </div>
+      <div class="hstat">
+        <div class="hstat-val">0.8003</div>
+        <div class="hstat-label">Model Accuracy (XGBoost, cross-validated, strong model)</div>
+      </div>
+      <div class="hstat">
+        <div class="hstat-val">76.3%</div>
+        <div class="hstat-label">Subscribers found in top 30% of file</div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-inner">
+    <a href="#dataset">Dataset</a>
+    <a href="#eda">EDA &amp; SQL</a>
+    <a href="#pipeline">Pipeline</a>
+    <a href="#tableau">Tableau</a>
+    <a href="#model">Model</a>
+    <a href="#results">Lift Results</a>
+    <a href="#impact">Business Impact</a>
+    <a href="#conclusions">Conclusions</a>
+  </div>
+</nav>
+
+
+<!-- 01 DATASET -->
+<section id="dataset">
+  <div class="sec-label">01: Dataset</div>
+  <h2>Where the Data Comes From</h2>
+
+  <div class="source-box">
+    <div>
+      <strong>UCI Bank Marketing Dataset — bank-additional-full.csv</strong>
+      <p>
+        This dataset originates from the UC Irvine Machine Learning Repository and is based on the study by
+        S. Moro, P. Cortez, and P. Rita on predicting the success of bank telemarketing campaigns.
+        The original research is published in <em>Decision Support Systems (2014)</em>.
+      </p>
+
+      <p>
+        Reference paper:<br>
+        S. Moro, P. Cortez, P. Rita. “A Data-Driven Approach to Predict the Success of Bank Telemarketing.”<br>
+        <em>Decision Support Systems</em>, 2014.
+        <a href="https://doi.org/10.1016/j.dss.2014.03.001" target="_blank">
+          doi:10.1016/j.dss.2014.03.001
+        </a>
+      </p>
+
+      <p>
+        Dataset source:<br>
+        <a href="https://archive.ics.uci.edu/dataset/222/bank+marketing" target="_blank">
+          UC Irvine Machine Learning Repository - Bank Marketing Dataset
+        </a>
+      </p>
+    </div>
+  </div>
+
+  <div class="metric-grid">
+    <div class="metric-card">
+      <div class="mc-label">Total Records</div>
+      <div class="mc-val">41,188</div>
+      <div class="mc-sub">bank-additional-full.csv</div>
+    </div>
+    <div class="metric-card">
+      <div class="mc-label">Input Features</div>
+      <div class="mc-val">20</div>
+      <div class="mc-sub">+ 1 target variable (y)</div>
+    </div>
+    <div class="metric-card">
+      <div class="mc-label">Subscribed (yes)</div>
+      <div class="mc-val">4,640</div>
+      <div class="mc-sub">11.27% of all contacts</div>
+    </div>
+    <div class="metric-card">
+      <div class="mc-label">Did Not Subscribe</div>
+      <div class="mc-val">36,548</div>
+      <div class="mc-sub">88.73% of all contacts</div>
+    </div>
+    <div class="metric-card">
+      <div class="mc-label">Age Range</div>
+      <div class="mc-val">17–98</div>
+      <div class="mc-sub">Mean age: 40.0 years</div>
+    </div>
+    <div class="metric-card">
+      <div class="mc-label">First-Time Contacts</div>
+      <div class="mc-val">39,673</div>
+      <div class="mc-sub">96.3% had never been called before</div>
+    </div>
+  </div>
+
+  <p class="lead">
+    The dataset covers phone-based direct marketing campaigns run by a Portuguese bank between May 2008 and
+    November 2010. Each row is one client contact, and the target variable y tells us if the
+    client opened a term deposit. The class imbalance, which is roughly 9:1 no-to-yes, is a real
+    challenge. Below are the different fields in the bank-additional-full.csv dataset.
+  </p>
+
+  <table class="data-table">
+    <thead>
+      <tr><th>Field</th><th>Type</th><th>Description</th><th>Stat from CSV</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>age</td><td>int</td><td>Client age in years</td><td>min=17, max=98, mean=40.0</td></tr>
+      <tr><td>job</td><td>text</td><td>Occupation type (12 categories)</td><td>student: 31.43% rate (highest)</td></tr>
+      <tr><td>marital</td><td>text</td><td>Marital status</td><td>single: 14.0%, married: 10.16%</td></tr>
+      <tr><td>education</td><td>text</td><td>Education level (8 levels)</td><td>university.degree: 13.72%</td></tr>
+      <tr><td>default</td><td>text</td><td>Credit in default?</td><td>8,597 coded as 'unknown'</td></tr>
+      <tr><td>housing / loan</td><td>text</td><td>Loan status flags</td><td>990 each coded as 'unknown'</td></tr>
+      <tr><td>contact</td><td>text</td><td>Contact channel</td><td>cellular: 14.74% vs telephone: 5.23%</td></tr>
+      <tr><td>month</td><td>text</td><td>Month of last contact</td><td>mar: 50.55% (best), may: 6.43% (worst)</td></tr>
+      <tr><td>campaign</td><td>int</td><td>Number of contacts this campaign</td><td>1 contact: 13.04%, 6+: 5.49%</td></tr>
+      <tr><td>pdays</td><td>int</td><td>Days since prior campaign (999 = never contacted)</td><td>39,673 records = 999</td></tr>
+      <tr><td>poutcome</td><td>text</td><td>Prior campaign outcome</td><td>success: 65.11%, nonexistent: 8.83%</td></tr>
+      <tr><td>emp.var.rate</td><td>float</td><td>Employment variation rate (quarterly)</td><td>avg subscribed= -1.233, avg not=+0.249</td></tr>
+      <tr><td>euribor3m</td><td>float</td><td>3-month Euribor rate (daily)</td><td>avg subscribed=2.12%, avg not=3.81%</td></tr>
+      <tr><td>nr.employed</td><td>float</td><td>Employees in economy (quarterly, 000s)</td><td>Top XGBoost feature - importance 0.676</td></tr>
+      <tr class="hl"><td>y</td><td>text</td><td><strong>TARGET: did the client subscribe?</strong></td><td>yes=4,640,  no=36,548,  rate=11.27%</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<div class="divider"></div>
+
+
+<!-- 02 EDA -->
+<section id="eda">
+  <div class="sec-label">02: Exploratory Analysis</div>
+  <h2>What the SQL Turned Up</h2>
+  <p class="lead">
+    Before touching any model, I loaded the CSV into SQLite and ran a series of GROUP BY queries to understand which segments actually convert. A few things jumped out immediately.
+  </p>
+
+  <div class="insight">
+    <p>Customers who previously subscribed are far more likely to convert again (65.11%) compared to first-time contacts (9.26%), making prior campaign success the strongest predictor of future response.</p>
+    <small>SQL — GROUP BY poutcome and pdays=999 vs pdays≠999</small>
+  </div>
+
+  <div class="two-col">
+    <div class="chart-card">
+      <div class="chart-card-title">Subscription Rate by Job</div>
+      <div class="chart-card-desc">
+        Students (31.43%) and retirees (25.23%) convert at roughly 2-3x the overall average.
+        Blue-collar workers at 6.89% sit well below the 11.27% baseline.
+      </div>
+      <div style="position:relative;height:290px">
+        <canvas id="jobChart" role="img" aria-label="Horizontal bar: student 31.43%, retired 25.23%, blue-collar 6.89%."></canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-card-title">Subscription Rate by Age Band</div>
+      <div class="chart-card-desc">
+        The oldest group (65+) subscribes at 47.21%, which is more than four times the baseline. This is a small
+        segment at n=663. The 35-54 range is where most contacts land but both age bands sit at 8.65%.
+      </div>
+      <div style="position:relative;height:290px">
+        <canvas id="ageChart" role="img" aria-label="Bar: 65+ = 47.21%, 18-24 = 23.97%, 35-54 = 8.65%."></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div class="chart-card">
+      <div class="chart-card-title">Seasonality: Response Rate by Month</div>
+      <div class="chart-card-desc">
+        This dataset does not have data from Janurary or February! March (50.55%), December (48.90%) and September (44.91%) are peak months by a wide margin. May is
+        interesting because it is the busiest month by volume (n=13,769) but the worst performer at 6.43%, being at the bottom.
+        This shows there are a lot of calls for very few sign-ups!
+      </div>
+      <div style="position:relative;height:290px">
+        <canvas id="monthChart" role="img" aria-label="Bar: mar 50.55%, dec 48.90%, may 6.43%."></canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-card-title">Effect of Prior Campaign Outcome</div>
+      <div class="chart-card-desc">
+        If the client said yes last time, they say yes again at 65.11% (n=1,373). Even with a prior failure (14.23%)
+        beats first-time contacts (8.83%) by nearly 2 times. This is important for making analysis based on the history.
+      </div>
+      <div style="position:relative;height:290px">
+        <canvas id="poutcomeChart" role="img" aria-label="Bar: success 65.11%, failure 14.23%, nonexistent 8.83%."></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div class="chart-card">
+      <div class="chart-card-title">Contact Channel: Cellular vs Telephone</div>
+      <div class="chart-card-desc">
+        Cellular reaches a 14.74% rate vs. 5.23% on telephone, which is nearly 3x better.
+      </div>
+      <div style="position:relative;height:210px">
+        <canvas id="contactChart" role="img" aria-label="Bar: cellular 14.74%, telephone 5.23%."></canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-card-title">Diminishing Returns: Contact Frequency</div>
+      <div class="chart-card-desc">
+        Response drops from 13.04% at the first contact down to 5.49% for clients reached 6+ times.
+        Past three contacts you are spending money on people who have already made up their mind.
+      </div>
+      <div style="position:relative;height:210px">
+        <canvas id="campaignChart" role="img" aria-label="Bar: 1 contact 13.04%, 6+ contacts 5.49%."></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="chart-card">
+    <div class="chart-card-title">Macroeconomic Signal: Euribor Rate by Subscription Outcome</div>
+    <div class="chart-card-desc">
+      Clients who subscribed were contacted during periods when the Euribor 3-month
+      rate averaged just 2.12%, compared to 3.81% for non-subscribers. When borrowing is cheap, term deposits
+      become relatively more attractive. Therefore, economic timing turns out to be a stronger predictor than most
+      demographic variables. This also explains why <code>nr.employed</code> dominates the XGBoost model!
+    </div>
+    <div style="position:relative;height:190px">
+      <canvas id="euriborChart" role="img" aria-label="Bar: subscribers averaged 2.12% Euribor, non-subscribers 3.81%."></canvas>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+
+<!-- 03 PIPELINE -->
+<section id="pipeline">
+  <div class="sec-label">03: Pipeline</div>
+  <h2>How the Project Was Built</h2>
+  <p class="lead">
+    The workflow follows a standard database marketing process where I load and validate in SQL, engineer features,
+    train and compare models, score the file, and translate results to find trends.
+  </p>
+
+  <div class="pipeline">
+    <div class="pipe-step">
+      <div class="pipe-num">01</div>
+      <h4>CSV → SQLite</h4>
+      <p>Load bank-additional-full.csv (41,188 rows), rename reserved-word columns, verify the record counts.</p>
+    </div>
+    <div class="pipe-step">
+      <div class="pipe-num">02</div>
+      <h4>Quality Control in SQL</h4>
+      <p>Check for header-row contamination, confirm class split matches documentation, count unknowns per field. This is for data preprocessing.</p>
+    </div>
+    <div class="pipe-step">
+      <div class="pipe-num">03</div>
+      <h4>Feature Engineering</h4>
+      <p>SQL CREATE VIEW: CASE WHEN age bands, education ordinals, binary flags, this is fed straight into Python via read_sql.</p>
+    </div>
+    <div class="pipe-step">
+      <div class="pipe-num">04</div>
+      <h4>Model Training</h4>
+      <p>5-fold stratified CV across Logistic Regression, Random Forest, XGBoost.</p>
+    </div>
+    <div class="pipe-step">
+      <div class="pipe-num">05</div>
+      <h4>Score & Report</h4>
+      <p>Score all 41,188 records, build the decile lift table, publish the Tableau dashboard that was created from the prep_for_tableau.csv dataset I made, write up the ROI case.</p>
+    </div>
+  </div>
+
+  <div class="code-block"><pre><span class="cm"># Load the dataset</span>
+df = pd.read_csv(<span class="str">r'bank-additional\bank-additional-full.csv'</span>, sep=<span class="str">';'</span>)
+<span class="cm"># len(df) = 41,188 | (df['y']=='yes').mean() = 0.1127</span>
+
+conn = sqlite3.connect(<span class="str">'bank_marketing.db'</span>)
+df.to_sql(<span class="str">'bank_marketing'</span>, conn, if_exists=<span class="str">'replace'</span>, index=<span class="kw">False</span>)
+
+<span class="cm"># Feature engineering in SQL — keeps it reproducible and auditable</span>
+conn.execute(<span class="str">"""CREATE VIEW model_features AS
+  SELECT age,
+    CASE WHEN age&lt;25 THEN 0 WHEN age&lt;35 THEN 1 WHEN age&lt;45 THEN 2
+         WHEN age&lt;55 THEN 3 WHEN age&lt;65 THEN 4 ELSE 5 END  AS age_band_ord,
+    CASE WHEN pdays=999 THEN 0 ELSE 1 END                   AS was_previously_contacted,
+    CASE poutcome WHEN 'failure'     THEN 0
+                  WHEN 'nonexistent' THEN 1
+                  WHEN 'success'     THEN 2 END              AS poutcome_ord,
+    CASE WHEN contact='cellular' THEN 1 ELSE 0 END           AS is_cellular,
+    "emp.var.rate", "cons.price.idx", "cons.conf.idx",
+    euribor3m, "nr.employed",
+    CASE WHEN y='yes' THEN 1 ELSE 0 END                      AS y_binary
+  FROM bank_marketing"""</span>)</pre>
+  </div>
+  <p>
+    This section prepares the dataset for analysis by loading the raw CSV into a SQLite database
+    and creating a structured SQL view called <em>model_features</em>. The goal is to make the data
+    clean, consistent, and ready for both analysis and modeling in a reproducible way.
+  </p>
+  <br><br>
+  <p>
+    The SQL view transforms raw variables into numerical formats that machine learning models can interpret. For example, age is grouped into
+    ordered bands, previous contact status (<code>pdays</code>) is converted into a binary indicator,
+    and campaign outcome (<code>poutcome</code>) is encoded as an ordinal variable. Categorical values
+    like contact method are also simplified into binary flags, while economic indicators such as
+    interest rates and employment variables are retained as numeric inputs. Finally, the target variable
+    (<code>y</code>) is converted into a binary outcome for modeling.
+  </p>
+  <br><br>
+</section>
+
+<div class="divider"></div>
+
+
+<!-- 04 TABLEAU -->
+<section id="tableau">
+  <div class="sec-label">04: Interactive Dashboard</div>
+  <h2>Tableau Dashboard</h2>
+  <p class="lead">
+    Five interactive worksheets built from <code>bank_for_tableau.csv</code>, which was derived from bank-additional-full.csv
+    with no changes to the underlying values, just column renames and some helper fields to make Tableau
+    calculated fields less painful. Click any mark to filter across the five different sheets I created using Tableau Public.
+  </p>
+
+  <div class="tableau-wrap">
+    <div class="tableau-header">
+      <div class="chart-card-title">Optimizing Bank Marketing Campaigns — Drivers of Subscription Response</div>
+      <div class="chart-card-desc">UCI Bank Marketing Dataset (Moro, Cortez &amp; Rita, 2014) · 41,188 records</div>
+    </div>
+    <div class="tableau-embed">
+      <div class='tableauPlaceholder' id='viz1776742221988' style='position:relative'>
+        <noscript>
+          <a href='#'><img alt=' ' src='https://public.tableau.com/static/images/Op/OptimizingBankMarketingCampaignsDriversofSubscriptionResponse/EuriborRatevsResponse/1_rss.png' style='border:none'/></a>
+        </noscript>
+        <object class='tableauViz' style='display:none;'>
+          <param name='host_url' value='https%3A%2F%2Fpublic.tableau.com%2F'/>
+          <param name='embed_code_version' value='3'/>
+          <param name='site_root' value=''/>
+          <param name='name' value='OptimizingBankMarketingCampaignsDriversofSubscriptionResponse&#47;EuriborRatevsResponse'/>
+          <param name='tabs' value='yes'/>
+          <param name='toolbar' value='yes'/>
+          <param name='static_image' value='https://public.tableau.com/static/images/Op/OptimizingBankMarketingCampaignsDriversofSubscriptionResponse/EuriborRatevsResponse/1.png'/>
+          <param name='animate_transition' value='yes'/>
+          <param name='display_static_image' value='yes'/>
+          <param name='display_spinner' value='yes'/>
+          <param name='display_overlay' value='yes'/>
+          <param name='display_count' value='yes'/>
+          <param name='language' value='en-US'/>
+        </object>
+      </div>
+      <script type='text/javascript'>
+        var divElement = document.getElementById('viz1776742221988');
+        var vizElement = divElement.getElementsByTagName('object')[0];
+        vizElement.style.width = '100%';
+        vizElement.style.height = (divElement.offsetWidth * 0.75) + 'px';
+        var scriptElement = document.createElement('script');
+        scriptElement.src = 'https://public.tableau.com/javascripts/api/viz_v1.js';
+        vizElement.parentNode.insertBefore(scriptElement, vizElement);
+      </script>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+
+<!-- 05 MODEL -->
+<section id="model">
+  <div class="sec-label">05: Predictive Model</div>
+  <h2>Model Selection &amp; Validation</h2>
+  <p class="lead">
+    Three models were compared using stratified 5-fold cross-validation on all 41,188 records.
+    I excluded <code>duration</code> throughout because it measures how long the call lasted, which you only know
+    after it ends. Including it would inflate the scores nicely but make the model useless for actually
+    deciding who to call in the first place, so I therefore left it out.
+  </p>
+
+  <div class="model-grid">
+    <div class="model-card">
+      <div class="model-name">Logistic Regression</div>
+      <div class="model-auc">0.7806</div>
+      <div class="model-cv">5-fold CV: 0.7806 ± 0.0091</div>
+      <div class="model-note">Good interpretable baseline. Worth keeping around for stakeholder explainability.</div>
+    </div>
+    <div class="model-card">
+      <div class="model-name">Random Forest</div>
+      <div class="model-auc">0.7736</div>
+      <div class="model-cv">5-fold CV: 0.7736 ± 0.0064</div>
+      <div class="model-note">Handles the non-linear interactions well but came in slightly below logistic regression here.</div>
+    </div>
+    <div class="model-card winner">
+      <div class="winner-badge">Selected</div>
+      <div class="model-name">XGBoost</div>
+      <div class="model-auc">0.8003</div>
+      <div class="model-cv">5-fold CV: 0.8003 ± 0.0061 · Full AUC: 0.8455</div>
+      <div class="model-note">Best CV score and best decile lift which is what actually matters for campaign targeting.</div>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div class="chart-card">
+      <div class="chart-card-title">Model AUC-ROC Comparison (5-Fold Stratified CV)</div>
+      <div class="chart-card-desc">All three values from actual sklearn cross_val_score runs on the full dataset.</div>
+      <div style="position:relative;height:220px">
+        <canvas id="modelCompareChart" role="img" aria-label="Bar: LR 0.7806, RF 0.7736, XGBoost 0.8003."></canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-card-title">XGBoost Feature Importance (Top 8)</div>
+      <div class="chart-card-desc">
+        <code>nr.employed</code> importance = 0.676. The number of people employed in the economy dominates
+        everything else. When the labour market contracts, clients seem more inclined to put money somewhere
+        safe. I can now understand that economic timing matters more than demographics.
+      </div>
+      <div style="position:relative;height:220px">
+        <canvas id="featureChart" role="img" aria-label="Horizontal bar: nr.employed 0.676, emp.var.rate 0.056, was_prev_contacted 0.047."></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="chart-card" style="margin-top:0.5rem">
+    <div class="chart-card-title">Full Model Report: Generated from Python (sklearn + XGBoost)</div>
+    <div class="chart-card-desc">
+      
+      <b>Top-left: Cumulative Gain Curve</b><br>
+      The cumulative gain curve shows that contacting the top 30% of the scored file captures 76% of all subscribers.
+      <br><br>
+
+      <b>Top-right: ROC Curve</b><br>
+      The ROC curve confirms an AUC of 0.845 on the held-out test set.
+      <br><br>
+
+      <b>Bottom-left: Decile Performance</b><br>
+      Subscription rate by model score decile shows strong separation, where decile 1 reaches 58.3%, representing a 5.1× lift over the 11.27% baseline.
+      <br><br>
+
+      <b>Bottom-right: Feature Importance</b><br>
+      XGBoost feature importance highlights that <code>nr_employed</code> alone accounts for over half of the model’s explanatory power.
+
+    </div>
+    <img
+      src="model_report.png"
+      alt="Bank Marketing Campaign model report: cumulative gain curve, ROC curve (AUC=0.845), subscription rate by decile, and XGBoost feature importance"
+      style="width:100%; border-radius:6px; display:block; margin-top:0.5rem;"
+    >
+  </div>
+</section>
+
+<div class="divider"></div>
+
+
+<!-- 06 RESULTS -->
+<section id="results">
+  <div class="sec-label">06: Lift Results</div>
+  <h2>Decile Lift Table</h2>
+  <p class="lead">
+    All values are derived from scoring the full set of 41,188 records using a trained XGBoost model and ranking them by predicted probability.
+    The dataset is divided into deciles of approximately 4,119 records each where the results show a clear and significant performance gap between the highest and lowest scoring groups.
+  </p>
+
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Decile</th><th>Records</th><th>Subscribers</th><th>Sub Rate</th>
+        <th>Lift</th><th>Cumulative % File</th><th>Cumulative % Subs</th><th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="hl"><td>1</td><td>4,119</td><td>2,386</td><td>57.93%</td><td>5.14×</td><td>10.0%</td><td>51.4%</td><td><span class="badge b-top">Contact</span></td></tr>
+      <tr class="hl"><td>2</td><td>4,119</td><td>714</td><td>17.33%</td><td>1.54×</td><td>20.0%</td><td>66.8%</td><td><span class="badge b-top">Contact</span></td></tr>
+      <tr class="hl"><td>3</td><td>4,119</td><td>442</td><td>10.73%</td><td>0.95×</td><td>30.0%</td><td>76.3%</td><td><span class="badge b-top">Contact</span></td></tr>
+      <tr><td>4</td><td>4,118</td><td>325</td><td>7.89%</td><td>0.70×</td><td>40.0%</td><td>83.3%</td><td><span class="badge b-mid">Incentive</span></td></tr>
+      <tr><td>5</td><td>4,119</td><td>234</td><td>5.68%</td><td>0.50×</td><td>50.0%</td><td>88.4%</td><td><span class="badge b-mid">Incentive</span></td></tr>
+      <tr><td>6</td><td>4,119</td><td>170</td><td>4.13%</td><td>0.37×</td><td>60.0%</td><td>92.0%</td><td><span class="badge b-sup">Suppress</span></td></tr>
+      <tr><td>7</td><td>4,118</td><td>137</td><td>3.33%</td><td>0.30×</td><td>70.0%</td><td>95.0%</td><td><span class="badge b-sup">Suppress</span></td></tr>
+      <tr><td>8</td><td>4,119</td><td>102</td><td>2.48%</td><td>0.22×</td><td>80.0%</td><td>97.2%</td><td><span class="badge b-sup">Suppress</span></td></tr>
+      <tr><td>9</td><td>4,119</td><td>91</td><td>2.21%</td><td>0.20×</td><td>90.0%</td><td>99.2%</td><td><span class="badge b-sup">Suppress</span></td></tr>
+      <tr><td>10</td><td>4,119</td><td>39</td><td>0.95%</td><td>0.08×</td><td>100.0%</td><td>100.0%</td><td><span class="badge b-sup">Suppress</span></td></tr>
+    </tbody>
+  </table>
+
+  <div class="two-col">
+    <div class="chart-card">
+      <div class="chart-card-title">Cumulative Gain Curve: XGBoost vs Random</div>
+      <div class="chart-card-desc">
+        Contacting just the top 30% of the scored file gets you 76.3% of all 4,640 subscribers.
+        The bottom 70% yields only the remaining 23.7%, which is more than double the cost per sign-up.
+      </div>
+      <div style="position:relative;height:270px">
+        <canvas id="liftChart" role="img" aria-label="Cumulative gain: top 10%=51.4%, top 30%=76.3%, top 50%=88.4%."></canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-card-title">Subscription Rate by Model Score Decile</div>
+      <div class="chart-card-desc">
+        Decile 1 hits 57.93%, which is a 5.14x the 11.27% baseline. By decile 6 we are already below average.
+        Deciles 6-10 are worth suppressing because you would spend budget on people who largely are not going to sign up.
+      </div>
+      <div style="position:relative;height:270px">
+        <canvas id="decileBarChart" role="img" aria-label="Bar: D1=57.93%, D2=17.33%, D10=0.95%."></canvas>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+
+<!-- 07 IMPACT -->
+<section id="impact">
+  <div class="sec-label">07: Business Impact</div>
+  <h2>What This Means in Practice</h2>
+  <p class="lead">
+    Hypothetical 100,000 record campaign at $1.00 per contact. All rates and lift figures come directly
+    from the XGBoost model output on the real 41,188-record dataset.
+  </p>
+
+  <div class="impact-grid">
+    <div class="impact-card navy">
+      <div class="impact-num">70%</div>
+      <div class="impact-label">Fewer contacts needed when targeting the top 3 deciles only</div>
+    </div>
+    <div class="impact-card red">
+      <div class="impact-num">5.14×</div>
+      <div class="impact-label">Lift in Decile 1, where 57.93% vs the 11.27% baseline</div>
+    </div>
+    <div class="impact-card gold">
+      <div class="impact-num">$70,000</div>
+      <div class="impact-label">Saved per 100K records at $1.00 per contact</div>
+    </div>
+    <div class="impact-card cream">
+      <div class="impact-num">76.3%</div>
+      <div class="impact-label">Of all subscribers still captured in the top 30% of the file</div>
+    </div>
+  </div>
+
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Metric</th>
+        <th>Random Mailing: 100,000 records</th>
+        <th>Model: Top 3 Deciles. 30,000 records</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Records contacted</td><td>100,000</td><td>30,000</td></tr>
+      <tr><td>Cost @ $1.00/record</td><td>$100,000</td><td>$30,000</td></tr>
+      <tr><td>Expected subscription rate</td><td>11.27% (dataset baseline)</td><td>28.66% (avg Deciles 1-3)</td></tr>
+      <tr><td>Expected subscribers</td><td>~11,270</td><td>~8,599</td></tr>
+      <tr class="hl"><td>Cost per subscriber</td><td>$8.87</td><td>$3.49</td></tr>
+      <tr class="hl"><td>Cost savings</td><td>—</td><td>$70,000 saved</td></tr>
+    </tbody>
+  </table>
+</section>
+
+
+<!-- 08 CONCLUSIONS -->
+<div class="conclusion" id="conclusions">
+  <div class="conclusion-inner">
+    <div class="sec-label" style="color:var(--accent2)">08: Conclusions</div>
+    <h2>What Each Section Found</h2>
+    <p>A quick summary of the main takeaway from each part of the project. All figures traced back to the UCI CSV files.</p>
+
+    <div class="tw-grid">
+      <div class="tw">
+        <div class="tw-num">Dataset</div>
+        <p>With just an 11.27% subscription rate across 41,188 records, the data is heavily imbalanced. This
+        makes it a realistic marketing problem. Simply calling everyone equally is expensive and wasteful,
+        which is exactly what makes segmentation and scoring worth doing.</p>
+      </div>
+      <div class="tw">
+        <div class="tw-num">EDA & SQL</div>
+        <p>Students and retirees convert best by job.
+        May sees the most calls but the lowest return. The pattern is consistent where the volume does not equal performance.</p>
+      </div>
+      <div class="tw">
+        <div class="tw-num">Contact Strategy</div>
+        <p>Cellular outperforms telephone nearly 3x and response drops sharply after the first contact. A prior
+        successful campaign is the strongest actionable flag in the dataset where those clients convert at 65.11%.</p>
+      </div>
+      <div class="tw">
+        <div class="tw-num">Macroeconomics</div>
+        <p>Subscribers were reached when Euribor averaged just 2.12% vs 3.81% for non-subscribers. Economic
+        timing and not the demographics explains most of the model's predictive power.</p>
+      </div>
+      <div class="tw">
+        <div class="tw-num">Predictive Model</div>
+        <p>XGBoost wins at AUC 0.8003 (5-fold CV). Dropping <b>duration</b>
+        was deliberate because keeping it would inflate results while making the model useless for actual pre-call decisions.</p>
+      </div>
+      <div class="tw">
+        <div class="tw-num">Lift &amp; ROI</div>
+        <p>Top 3 deciles capture 76.3% of subscribers at 30% of the file cost. Cost per subscriber drops from
+        $8.87 to $3.49 which saves $70,000 per 100,000 contacts at a dollar a record.</p>
+      </div>
+    </div>
+
+    <div style="margin-top:2.5rem;padding-top:2rem;border-top:1px solid rgba(255,255,255,0.1)">
+      <div class="sec-label" style="color:var(--accent2);margin-bottom:0.8rem">The SQL Files</div>
+      <div class="tw-grid">
+        <div class="tw">
+          <div class="tw-num">setup.sql</div>
+          <p>
+            <strong style="color:#fff;font-size:0.84rem">Schema and table creation: ran this once first!</strong><br><br>
+            This file sets up the SQLite database before any analysis. It drops any existing table (so re-running
+            is safe), then creates <code style="background:rgba(255,255,255,0.1);color:#9BE0FF">bank_marketing</code>
+            with the right column types. The tricky part is handling SQL reserved words like
+            <code style="background:rgba(255,255,255,0.1);color:#9BE0FF">"default"</code> and columns with dots
+            in the name like <code style="background:rgba(255,255,255,0.1);color:#9BE0FF">"emp.var.rate"</code>,
+            both need quoting or SQLite throws errors. After this runs, the CSV loads via
+            <code style="background:rgba(255,255,255,0.1);color:#9BE0FF">.import</code> with semicolons as the
+            delimiter. This is like creating the staging table before the raw file arrives, part of the preprocessing process.
+          </p>
+        </div>
+        <div class="tw">
+          <div class="tw-num">analysis.sql</div>
+          <p>
+            <strong style="color:#fff;font-size:0.84rem">Five sections, progressively deeper.</strong><br><br>
+            <strong style="color:rgba(255,255,255,0.7)">Section A, Quality Control:</strong> verifies the 41,188 row count,
+            confirms no header row leaked in, counts unknowns across key fields.<br><br>
+            <strong style="color:rgba(255,255,255,0.7)">Section B, Segmentation:</strong> GROUP BY response rates
+            across job, age, education, month, contact channel, prior outcome, contact frequency, marital status,
+            and a housing x loan cross-tab.<br><br>
+            <strong style="color:rgba(255,255,255,0.7)">Section C, Macroeconomics:</strong> compares Euribor,
+            employment rate and consumer confidence between subscribers and non-subscribers.<br><br>
+            <strong style="color:rgba(255,255,255,0.7)">Section D, Feature Engineering:</strong>
+            <code style="background:rgba(255,255,255,0.1);color:#9BE0FF">CREATE VIEW model_features</code> encodes
+            all the CASE WHEN transformations so Python can call
+            <code style="background:rgba(255,255,255,0.1);color:#9BE0FF">pd.read_sql()</code> and get a clean
+            model-ready table with no pandas wrangling.<br><br>
+            <strong style="color:rgba(255,255,255,0.7)">Section E, Summary:</strong> top job plus month combos,
+            first-time vs returning contacts, and best segments for targeting recommendations.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>Bank Marketing Campaign Analysis - UCI Dataset (Moro, Cortez & Rita, 2014) - All statistics computed from downloaded CSV files - Shayan Sobhani 4/21/2026</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="charts.js"></script>
+
+</body>
+</html>
